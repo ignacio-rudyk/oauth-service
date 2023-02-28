@@ -43,13 +43,14 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     @Override
     public UserDTO getUserByName(String name) throws OAuthServiceException {
         try{
+            logger.info("getUserByName "+name);
             String url = DOMAIN + GET_USER_BY_NAME + name;
             restTemplate.setMessageConverters(getJsonMessageConverters());
             HttpHeaders headers = new HttpHeaders();
             headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
             HttpEntity<String> requestEntity = new HttpEntity<String>(headers);
             ResponseEntity<ErrorResponse> responseEntity = restTemplate.exchange(url, HttpMethod.GET, requestEntity, ErrorResponse.class);
-            return mapper.map(getResponse(responseEntity), UserDTO.class);
+            return (UserDTO) getResponse(responseEntity);
         } catch (Throwable t) {
             logger.error("[Error " + t.getClass() + "] " + t.getMessage());
             throw t;
@@ -59,7 +60,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         try {
-            UserDTO user = this.getUserByName(username);
+            UserDTO user = getUserByName(username);
             if(user == null) {
                 logger.error("No existe el usuario " + username);
                 throw new UsernameNotFoundException("No existe el usuario");
@@ -68,6 +69,8 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                     .stream()
                     .map(rol -> new SimpleGrantedAuthority(rol.getName()))
                     .collect(Collectors.toList());
+            System.out.println(user);
+            System.out.println(authorities);
             return new User(user.getName(), user.getPassword(), user.getEnabled(), Boolean.TRUE, Boolean.TRUE, Boolean.TRUE, authorities);
         } catch (OAuthServiceException e) {
             throw new RuntimeException(e);
